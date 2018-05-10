@@ -4,13 +4,13 @@ Unison container suited for Docksal needs. Continuously syncs files between two 
 
 ## Usage
 
-Add to the `docksal.env`:
+1. Add to the `docksal.env`:
 
-```
-DOCKER_VOLUMES=unison
-```
+    ```
+    DOCKER_VOLUMES=unison
+    ```
 
-Restart the project with `fin project restart`.
+1. Reset the project with `fin project reset`
 
 ## Additional environment variables
 
