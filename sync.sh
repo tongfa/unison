@@ -131,10 +131,7 @@ fi
 log_heading "Generating Unison profile"
 mkdir -p "${HOME}/.unison"
 
-#unisonsilent="true"
-#if [[ "$SYNC_VERBOSE" == "0" ]]; then
-  unisonsilent="false"
-#fi
+unisonsilent="false"
 
 nodelete=""
 if [[ "$SYNC_NODELETE_SOURCE" == "1" ]]; then
@@ -147,7 +144,7 @@ if [[ -z "${SYNC_PREFER}" ]]; then
 fi
 
 echo "
-root =$SYNC_SOURCE
+root = $SYNC_SOURCE
 root = $SYNC_DESTINATION
 
 # Sync options
@@ -163,14 +160,16 @@ contactquietly = true
 # do fast update detection (true/false/default)
 fastcheck = true
 # lof file location
-log=false
+log = false
 # logfile=/tmp/unison.log
 
-maxthreads=10
+maxthreads = 10
 $nodelete
-prefer=$SYNC_PREFER
-repeat=watch
-silent=$unisonsilent
+# Set preferred source during conflicts
+prefer = $SYNC_PREFER
+repeat = watch
+# DO NOT BE SILENT. That's how we know what Unison is doing
+silent = false
 
 # Files to ignore
 ignore = Name *___jb_tmp___*

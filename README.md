@@ -1,7 +1,6 @@
 # Docksal Unison
 
-Unison container derived from [docker-bg-sync](https://github.com/cweagans/docker-bg-sync) and suited for 
-Docksal needs. Continuously syncs files between two directories. 
+Unison container suited for Docksal needs. Continuously syncs files between two directories. 
 
 ## Usage
 
@@ -14,6 +13,9 @@ DOCKER_VOLUMES=unison
 Restart the project with `fin project restart`.
 
 ## Additional environment variables
+
+You do not need to set any additional variables for the container to work, 
+but you can override them, if you undertstand what you are doing.
 
 This container uses values from a handful of environment variables. These are
 documented below.
@@ -31,8 +33,6 @@ documented below.
     when there are conflits. By default the contents from the source folder are
     left unchanged but there is also the "newer" option to pick up the most
     recent files.
-  * **`SYNC_VERBOSE`** (default: "0"): Set this variable to "1" to get more log
-    output from Unison.
   * **`SYNC_MAX_INOTIFY_WATCHES`** (default: ''): If set, the sync script will
     attempt to increase the value of `fs.inotify.max_user_watches`. **IMPORTANT**:
     This requires that you run this container as a priviliged container. Otherwise,
