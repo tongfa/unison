@@ -32,7 +32,7 @@ script:
   - echo "Everything is perfect"
 
 after_success: |
-  echo "After success begin."
+  echo "After success begin. PR: ${TRAVIS_PULL_REQUEST}"
   if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
     # develop => edge
     [[ "${TRAVIS_BRANCH}" == "develop" ]] && TAG="edge"
