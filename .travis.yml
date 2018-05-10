@@ -40,6 +40,8 @@ after_success: |
     # tags/v1.2.0 => 1.2
     [[ "${TRAVIS_TAG}" != "" ]] && TAG="${TRAVIS_TAG:1:3}"
 
+    echo "TAG: $TAG"
+
     if [[ "$TAG" != "" ]]; then
       docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
       docker tag ${IMAGE} ${REPO}:${TAG}
