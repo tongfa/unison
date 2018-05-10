@@ -1,38 +1,19 @@
-# bg-sync
+# Docksal Unison
 
-This container continuously syncs files between two directories. This is useful
-for avoiding the filesystem slowness on Docker for Mac, for instance. It's also
-generally useful for any other time where you have a slow filesystem as a source
-of files that need to be read inside of a container.
+Unison container derived from [docker-bg-sync](https://github.com/cweagans/docker-bg-sync) and suited for 
+Docksal needs. Continuously syncs files between two directories. 
 
 ## Usage
 
-This is a basic `docker-compose.yml` that demonstrates usage of this container.
+Add to the `docksal.env`:
 
 ```
-
-version: '2'
-
-services:
-  web:
-    image: php:7.0-apache
-    volumes:
-      - /var/www/myapp
-
-  bg-sync:
-    image: cweagans/bg-sync
-    volumes:
-      - .:/source
-    volumes_from:
-      - web
-    environment:
-      - SYNC_DESTINATION=/var/www/myapp
-      - SYNC_MAX_INOTIFY_WATCHES=40000
-      - SYNC_VERBOSE=1
-    privileged: true
+DOCKER_VOLUMES=unison
 ```
 
-## Environment variables
+Restart the project with `fin project restart`.
+
+## Additional environment variables
 
 This container uses values from a handful of environment variables. These are
 documented below.
@@ -77,33 +58,6 @@ documented below.
   * **`UNISON_GROUP`** (default: 'root'): See UNISON_USER.
   * **`UNISON_GID`** (default: '0'): See UNISON_USER.
 
-## Why not use *x*?
-
-I've probably tried it and didn't like it for one reason or another. If you think
-that's not the case, open an issue. I'd love to be told about another project that
-makes it possible to deprecate this one.
-
-Specific reasons:
-
-* **[Docker Sync](https://github.com/eugenmayer/docker-sync)**: Although the choice
-  of sync backends is cool, I think it's better to offer just one and make sure
-  that it works as close to perfect as is possible. The big deal breaker with
-  Docker Sync, though, is that it requires installing extra stuff on the host.
-  The entire point of containerization is that you shouldn't have to worry about
-  that kind of stuff.
-* **[Docker Magic Sync](https://github.com/mickaelperrin/docker-magic-sync)**:
-  I like the idea - using Docker Gen to generate a set of Unison profiles + a
-  supervisord config is pretty clever. However, I rarely need to sync more than
-  one pair of directories, and when I do, each set of directories usually needs
-  different configurations. With bg-sync, you can spin up multiple instances of
-  the container, each with different Unison configurations if you want to.
-
-
 ## Credits
 
-* Mickael Perrin - [docker-magic-sync](https://github.com/mickaelperrin/docker-magic-sync)
-* Eugen Mayer - [docker-sync](https://github.com/eugenmayer/docker-sync)
-
-## Donations
-
-Bitcoin donation address: 149NMUk73ETqEP3ML9sghpWQqEqAREX9z2
+* Cameron Eagans - [docker-bg-sync](https://github.com/cweagans/docker-bg-sync)

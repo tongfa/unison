@@ -1,11 +1,4 @@
 FROM alpine:3.5
-MAINTAINER Cameron Eagans <me@cweagans.net>
-
-# Install needed packages.
-#RUN apt-get -qq update && \
-#    apt-get -qq install inotify-tools rsync unison-all && \
-#    apt-get clean && \
-#    rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
 
 # Alpine doesn't ship with Bash.
 RUN apk add --no-cache bash

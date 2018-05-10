@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+# Exit on the error
 set -eo pipefail
 
 # Log output formatters
@@ -19,13 +21,29 @@ log_error_exit() {
 }
 
 # Create non-root user
-if [ "$UNISON_USER" != "root" ]; then
-  log_heading "Setting up non-root user ${UNISON_USER}."
-  HOME="/home/${UNISON_USER}"
-  addgroup -g $UNISON_GID -S $UNISON_GROUP
-  adduser -u $UNISON_UID -D -S -G $UNISON_GROUP $UNISON_USER
-  mkdir -p ${HOME}/.unison
-  chown -R ${UNISON_USER}:${UNISON_GROUP} ${HOME}
+if [[ "$UNISON_USER" != "root" ]]; then
+  log_heading "Setting up /home/${UNISON_USER}"
+  local HOME="/home/${UNISON_USER}"
+
+  # create group only, if it not exists
+  if ! grep -q "$UNISON_GROUP" /etc/group; then
+      log_info "Creating group $UNISON_GROUP"
+      addgroup -g "$UNISON_GID" -S "$UNISON_GROUP"
+  fi
+
+  # create user only, if it not exists
+  if ! grep -q "$UNISON_USER" /etc/passwd; then
+      log_info "Creating user $UNISON_USER (UID=$UNISON_UID,GID=$UNISON_GID)"
+      adduser -u "$UNISON_UID" -D -S -G "$UNISON_GROUP" "$UNISON_USER"
+  fi
+
+  # create unison directory
+  log_info "Creating ${HOME}/.unison"
+  mkdir -p "${HOME}/.unison" || true
+
+  # own the home directory
+  log_info "Applying user permissions to ${HOME}"
+  chown -R "${UNISON_USER}:${UNISON_GROUP}" "${HOME}"
 fi
 
 #
@@ -33,28 +51,28 @@ fi
 #
 
 # The source for the sync. This will also be recursively monitored by inotifywatch.
-: ${SYNC_SOURCE:="/source"}
+: "${SYNC_SOURCE:="/source"}"
 
 # The destination for sync. When files are changed in the source, they are automatically
 # synced to the destination.
-: ${SYNC_DESTINATION:="/destination"}
+: "${SYNC_DESTINATION:="/destination"}"
 
 # The preferred approach to deal with conflicts
-: ${SYNC_PREFER:=$SYNC_SOURCE}
+: "${SYNC_PREFER:=$SYNC_SOURCE}"
 
 # If set, there will be more verbose log output from various commands that are
 # run by this script.
-: ${SYNC_VERBOSE:="0"}
+: "${SYNC_VERBOSE:="0"}"
 
 # If set, this script will attempt to increase the inotify limit accordingly.
 # This option REQUIRES that the container be run as a privileged container.
-: ${SYNC_MAX_INOTIFY_WATCHES:=''}
+: "${SYNC_MAX_INOTIFY_WATCHES:=''}"
 
 # This variable will be appended to the end of the Unison profile.
-: ${SYNC_EXTRA_UNISON_PROFILE_OPTS:=''}
+: "${SYNC_EXTRA_UNISON_PROFILE_OPTS:=''}"
 
 # If set, the source will allow files to be deleted.
-: ${SYNC_NODELETE_SOURCE:="1"}
+: "${SYNC_NODELETE_SOURCE:="1"}"
 
 log_heading "Starting bg-sync"
 
@@ -63,17 +81,17 @@ log_heading "Configuration:"
 log_info "SYNC_SOURCE:                  $SYNC_SOURCE"
 log_info "SYNC_DESTINATION:             $SYNC_DESTINATION"
 log_info "SYNC_VERBOSE:                 $SYNC_VERBOSE"
-if [ -n "${SYNC_MAX_INOTIFY_WATCHES}" ]; then
+if [[ -n "${SYNC_MAX_INOTIFY_WATCHES}" ]]; then
   log_info "SYNC_MAX_INOTIFY_WATCHES:     $SYNC_MAX_INOTIFY_WATCHES"
 fi
 
 # Validate values as much as possible.
-[ -d "$SYNC_SOURCE" ] || log_error_exit "Source directory does not exist!"
-[ -d "$SYNC_DESTINATION" ] || log_error_exit "Destination directory does not exist!"
+[[ -d "$SYNC_SOURCE" ]] || log_error_exit "Source directory '$SYNC_SOURCE' does not exist!"
+[[ -d "$SYNC_DESTINATION" ]] || log_error_exit "Destination directory '$SYNC_DESTINATION' does not exist!"
 [[ "$SYNC_SOURCE" != "$SYNC_DESTINATION" ]] || log_error_exit "Source and destination must be different directories!"
 
 # If SYNC_EXTRA_UNISON_PROFILE_OPTS is set, you're voiding the warranty.
-if [ -n "$SYNC_EXTRA_UNISON_PROFILE_OPTS" ]; then
+if [[ -n "$SYNC_EXTRA_UNISON_PROFILE_OPTS" ]]; then
   log_info ""
   log_info "IMPORTANT:"
   log_info ""
@@ -89,37 +107,23 @@ if [[ "$SYNC_VERBOSE" == "0" ]]; then
   SYNC_RSYNC_ARGS="$SYNC_RSYNC_ARGS --quiet"
 fi
 
-if [ -z "${SYNC_MAX_INOTIFY_WATCHES}" ]; then
-  # If SYNC_MAX_INOTIFY_WATCHES is not set and the number of files in the source
-  # is greater than the default inotify limit, warn the user so that they can
-  # take appropriate action.
-  file_count="$(find $SYNC_SOURCE | wc -l)"
-  if [[ "$file_count" < "8192" ]]; then
-    log_heading "inotify may not be able to monitor all of your files!"
-    log_info "By default, inotify can only monitor 8192 files. The configured source directory"
-    log_info "contains $file_count files. It's extremely likely that you will need to increase"
-    log_info "your inotify limit in order to be able to sync your files properly."
-    log_info "See the documentation for the SYNC_MAX_INOTIFY_WATCHES environment variable"
-    log_info "to handle increasing that limit inside of this container."
-  fi
+# If bg-sync runs with this environment variable set, we'll try to set the config
+# appropriately, but there's not much we can do if we're not allowed to do that.
+log_heading "Attempting to set maximum inotify watches to $SYNC_MAX_INOTIFY_WATCHES"
+log_info "If the container exits with 'Operation not allowed', make sure that"
+log_info "the container is running in privileged mode."
+if [[ -z "$(sysctl -p)" ]]; then
+    printf "fs.inotify.max_user_watches=$SYNC_MAX_INOTIFY_WATCHES\n" | tee -a /etc/sysctl.conf && 
+      sysctl -p
 else
-  # If bg-sync runs with this environment variable set, we'll try to set the config
-  # appropriately, but there's not much we can do if we're not allowed to do that.
-  log_heading "Attempting to set maximum inotify watches to $SYNC_MAX_INOTIFY_WATCHES"
-  log_info "If the container exits with 'Operation not allowed', make sure that"
-  log_info "the container is running in privileged mode."
-  if [ -z "$(sysctl -p)" ]; then
-    echo fs.inotify.max_user_watches=$SYNC_MAX_INOTIFY_WATCHES | tee -a /etc/sysctl.conf && sysctl -p
-  else
     log_info "Looks like /etc/sysctl.conf already has fs.inotify.max_user_watches defined."
     log_info "Skipping this step."
-  fi
 fi
 
 # Generate a unison profile so that we don't have a million options being passed
 # to the unison command.
 log_heading "Generating Unison profile"
-[ -d "${HOME}/.unison" ] || mkdir -p ${HOME}/.unison
+mkdir -p "${HOME}/.unison"
 
 unisonsilent="true"
 if [[ "$SYNC_VERBOSE" == "0" ]]; then
@@ -132,8 +136,8 @@ if [[ "$SYNC_NODELETE_SOURCE" == "1" ]]; then
 fi
 
 prefer="$SYNC_SOURCE"
-if [ -z "${SYNC_PREFER}" ]; then
-  prefer=${SYNC_PREFER}
+if [[ -z "${SYNC_PREFER}" ]]; then
+  prefer="${SYNC_PREFER}"
 fi
 
 echo "
@@ -169,4 +173,4 @@ $SYNC_EXTRA_UNISON_PROFILE_OPTS
 # Start syncing files.
 log_heading "Starting continuous sync."
 
-su -c "unison default" -s /bin/sh ${UNISON_USER}
+su -c "unison default" -s /bin/sh "${UNISON_USER}"
