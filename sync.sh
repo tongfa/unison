@@ -75,8 +75,7 @@ if [[ "$UNISON_USER" != "root" ]]; then
   # Own the home directory
   log_info "Applying user permissions to ${HOME}"
   chown -R "${UNISON_USER}:${UNISON_GROUP}" "${HOME}"
-  log_info "Applying user permissions to source and destination"
-  chown -R "${UNISON_USER}:${UNISON_GROUP}" "${SYNC_SOURCE}"
+  log_info "Applying user permissions to destination"
   chown -R "${UNISON_USER}:${UNISON_GROUP}" "${SYNC_DESTINATION}"
 fi
 
