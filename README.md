@@ -10,7 +10,8 @@ Unison container suited for Docksal needs. Continuously syncs files between two 
     DOCKER_VOLUMES=unison
     ```
 
-1. Reset the project with `fin project reset`
+1. If your project was running before, then remove old containers and volumes with `fin project remove` (`fin project reset` does not remove named volumes)
+1. Start project `fin project start`
 
 ## Additional environment variables
 
