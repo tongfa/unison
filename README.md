@@ -36,7 +36,7 @@ documented below.
     when there are conflits. By default the contents from the source folder are
     left unchanged but there is also the "newer" option to pick up the most
     recent files.
-  * **`SYNC_MAX_INOTIFY_WATCHES`** (default: ''): If set, the sync script will
+  * **`SYNC_MAX_INOTIFY_WATCHES`** (default in image: '', default in Docksal: '524288'): If set, the sync script will
     attempt to increase the value of `fs.inotify.max_user_watches`. **IMPORTANT**:
     This requires that you run this container as a priviliged container. Otherwise,
     the inotify limit increase *will not work*. As always, when running a third
@@ -50,7 +50,7 @@ documented below.
     **IMPORTANT**: The *ability* to add extra lines to your Unison profile is
     supported by the bg-sync project. The *results* of what might happen because
     of this configuration is *not*. Use this option at your own risk.
-  * **`SYNC_NODELETE_SOURCE`** (default: '1'): Set this variable to "0" to allow
+  * **`SYNC_NODELETE_SOURCE`** (default in image: '1', default in Docksal: '0'): Set this variable to "0" to allow
     Unison to sync deletions to the source directory. This could cause unpredictable
     behaviour with your source files.
   * **`UNISON_USER`** (default: 'root'): The user running Unison. When this value
