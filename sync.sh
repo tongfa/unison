@@ -59,13 +59,14 @@ if [[ "$UNISON_USER" != "root" ]]; then
   # Create group, if it does not exist
   if ! grep -q "$UNISON_GROUP" /etc/group; then
       log_info "Creating group $UNISON_GROUP"
-      addgroup -g "$UNISON_GID" -S "$UNISON_GROUP"
+      addgroup --gid "$UNISON_GID" --system "$UNISON_GROUP"
   fi
 
   # Create user, if it does not exist
   if ! grep -q "$UNISON_USER" /etc/passwd; then
       log_info "Creating user $UNISON_USER (UID=$UNISON_UID,GID=$UNISON_GID)"
-      adduser -u "$UNISON_UID" -D -S -G "$UNISON_GROUP" "$UNISON_USER" -s "$SHELL"
+      GID=$(getent group "$UNISON_GROUP" | cut -d: -f3)
+      adduser --uid "$UNISON_UID" --disabled-password --system --gid "$GID" --shell "$SHELL" "$UNISON_USER"
   fi
 
   # Create unison directory
