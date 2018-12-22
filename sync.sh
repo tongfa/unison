@@ -59,13 +59,13 @@ if [[ "$UNISON_USER" != "root" ]]; then
   # Create group, if it does not exist
   if ! grep -q "$UNISON_GROUP" /etc/group; then
       log_info "Creating group $UNISON_GROUP"
-      addgroup -g "$UNISON_GID" -S "$UNISON_GROUP"
+      groupadd --gid "$UNISON_GID" --system "$UNISON_GROUP"
   fi
 
   # Create user, if it does not exist
   if ! grep -q "$UNISON_USER" /etc/passwd; then
       log_info "Creating user $UNISON_USER (UID=$UNISON_UID,GID=$UNISON_GID)"
-      adduser -u "$UNISON_UID" -D -S -G "$UNISON_GROUP" "$UNISON_USER" -s "$SHELL"
+      useradd --shell "$SHELL" --uid "$UNISON_UID" --system -g "$UNISON_GROUP" "$UNISON_USER"
   fi
 
   # Create unison directory
@@ -187,7 +187,7 @@ log_heading "Starting continuous sync."
 # su -c "unison default" -s /bin/sh "${UNISON_USER}"
 
 if [[ "$UNISON_USER" != "root" ]]; then
-  su "${UNISON_USER}" -c "unison default"
+  su-exec "${UNISON_USER}" unison default
 else
   unison default
 fi

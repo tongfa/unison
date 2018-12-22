@@ -7,6 +7,7 @@ RUN apk add --no-cache bash
 ARG UNISON_VERSION=2.48.4
 RUN apk add --no-cache --virtual .build-dependencies build-base curl && \
     apk add --no-cache inotify-tools && \
+    apk add --no-cache shadow && rm /etc/default/useradd && \
     apk add --no-cache --repository http://dl-4.alpinelinux.org/alpine/edge/testing/ ocaml && \
     curl -L https://github.com/bcpierce00/unison/archive/$UNISON_VERSION.tar.gz | tar zxv -C /tmp && \
     cd /tmp/unison-${UNISON_VERSION} && \
@@ -15,6 +16,8 @@ RUN apk add --no-cache --virtual .build-dependencies build-base curl && \
     cp src/unison src/unison-fsmonitor /usr/local/bin && \
     apk del .build-dependencies ocaml && \
     rm -rf /tmp/unison-${UNISON_VERSION}
+
+RUN apk add --no-cache su-exec
 
 ENV HOME="/root" \
     UNISON_USER="root" \
@@ -25,5 +28,6 @@ ENV HOME="/root" \
 # Copy the bg-sync script into the container.
 COPY sync.sh /usr/local/bin/bg-sync
 RUN chmod +x /usr/local/bin/bg-sync
+
 
 CMD ["bg-sync"]
