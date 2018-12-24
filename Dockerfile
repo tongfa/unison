@@ -29,5 +29,5 @@ ENV HOME="/root" \
 COPY sync.sh /usr/local/bin/bg-sync
 RUN chmod +x /usr/local/bin/bg-sync
 
-
 CMD ["bg-sync"]
+
