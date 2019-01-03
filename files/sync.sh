@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #Exit on the error
+# EXPLANATION: remove -e since rsync exits with error code, which aborts this script.
 set -eo pipefail nounset errexit
 
 # Log output formatters
@@ -54,34 +55,36 @@ sudo chown -R ${UNISON_UID}:${UNISON_GID} ${HOME} ${SYNC_DESTINATION}
 
 ### --------------------- RUNTIME --------------------- ###
 
+# EXPLAINATION - I think this was added by docksal/unison project,
+#  but it is not compatible with upstream changes.
 # Create non-root user
-if [[ "$UNISON_USER" != "root" ]]; then
-  log_heading "Preparing to run as non-root user."
-  log_heading "Setting up /home/${UNISON_USER}"
-  HOME="/home/${UNISON_USER}"
+# if [[ "$UNISON_USER" != "root" ]]; then
+#   log_heading "Preparing to run as non-root user."
+#   log_heading "Setting up /home/${UNISON_USER}"
+#   HOME="/home/${UNISON_USER}"
 
-  # Create group, if it does not exist
-  if ! grep -q "$UNISON_GROUP" /etc/group; then
-      log_info "Creating group $UNISON_GROUP"
-      addgroup -g "$UNISON_GID" -S "$UNISON_GROUP"
-  fi
+#   # Create group, if it does not exist
+#   if ! grep -q "$UNISON_GROUP" /etc/group; then
+#       log_info "Creating group $UNISON_GROUP"
+#       addgroup -g "$UNISON_GID" -S "$UNISON_GROUP"
+#   fi
 
-  # Create user, if it does not exist
-  if ! grep -q "$UNISON_USER" /etc/passwd; then
-      log_info "Creating user $UNISON_USER (UID=$UNISON_UID,GID=$UNISON_GID)"
-      adduser -u "$UNISON_UID" -D -S -G "$UNISON_GROUP" "$UNISON_USER" -s "$SHELL"
-  fi
+#   # Create user, if it does not exist
+#   if ! grep -q "$UNISON_USER" /etc/passwd; then
+#       log_info "Creating user $UNISON_USER (UID=$UNISON_UID,GID=$UNISON_GID)"
+#       adduser -u "$UNISON_UID" -D -S -G "$UNISON_GROUP" "$UNISON_USER" -s "$SHELL"
+#   fi
 
-  # Create unison directory
-  log_info "Creating ${HOME}/.unison"
-  mkdir -p "${HOME}/.unison" || true
+#   # Create unison directory
+#   log_info "Creating ${HOME}/.unison"
+#   mkdir -p "${HOME}/.unison" || true
 
-  # Own the home directory
-  log_info "Applying user permissions to ${HOME}"
-  chown -R "${UNISON_USER}:${UNISON_GROUP}" "${HOME}"
-  log_info "Applying user permissions to destination"
-  chown -R "${UNISON_USER}:${UNISON_GROUP}" "${SYNC_DESTINATION}"
-fi
+#   # Own the home directory
+#   log_info "Applying user permissions to ${HOME}"
+#   chown -R "${UNISON_USER}:${UNISON_GROUP}" "${HOME}"
+#   log_info "Applying user permissions to destination"
+#   chown -R "${UNISON_USER}:${UNISON_GROUP}" "${SYNC_DESTINATION}"
+# fi
 
 log_heading "Starting bg-sync"
 
