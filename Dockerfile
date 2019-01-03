@@ -1,14 +1,14 @@
-FROM alpine:3.5
+FROM alpine:3.8
+MAINTAINER Cameron Eagans <me@cweagans.net>
 
-# Alpine doesn't ship with Bash.
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash sudo rsync
 
 # Install Unison from source with inotify support + remove compilation tools
-ARG UNISON_VERSION=2.48.4
+ARG UNISON_VERSION=2.51.2
 RUN apk add --no-cache --virtual .build-dependencies build-base curl && \
     apk add --no-cache inotify-tools && \
     apk add --no-cache --repository http://dl-4.alpinelinux.org/alpine/edge/testing/ ocaml && \
-    curl -L https://github.com/bcpierce00/unison/archive/$UNISON_VERSION.tar.gz | tar zxv -C /tmp && \
+    curl -Ll https://github.com/bcpierce00/unison/archive/v${UNISON_VERSION}.tar.gz | tar zxv -C /tmp && \
     cd /tmp/unison-${UNISON_VERSION} && \
     sed -i -e 's/GLIBC_SUPPORT_INOTIFY 0/GLIBC_SUPPORT_INOTIFY 1/' src/fsmonitor/linux/inotify_stubs.c && \
     make UISTYLE=text NATIVE=true STATIC=true && \
@@ -17,13 +17,16 @@ RUN apk add --no-cache --virtual .build-dependencies build-base curl && \
     rm -rf /tmp/unison-${UNISON_VERSION}
 
 ENV HOME="/root" \
-    UNISON_USER="root" \
-    UNISON_GROUP="root" \
-    UNISON_UID="0" \
-    UNISON_GID="0"
+    UNISONLOCALHOSTNAME="container"
 
-# Copy the bg-sync script into the container.
-COPY sync.sh /usr/local/bin/bg-sync
+# If run as UNISON_USER other than root, it still uses /root as $HOME
+RUN mkdir -p $HOME/.unison && chmod ugo+rwx $HOME && chmod ugo+rwx $HOME/.unison
+
+ADD files /
+
+# Copy the bg-sync script into /usr/local/bin.
+COPY /files/sync.sh /usr/local/bin/bg-sync
 RUN chmod +x /usr/local/bin/bg-sync
 
+HEALTHCHECK --start-period=30s --interval=10s --retries=5 CMD ["/healthcheck.sh"]
 CMD ["bg-sync"]

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-
-# Exit on the error
-set -eo pipefail
+#Exit on the error
+set -eo pipefail nounset errexit
 
 # Log output formatters
 log_heading() {
@@ -19,6 +18,11 @@ log_error_exit() {
   echo " !     Aborting!"
   exit 1
 }
+
+export UNISON_UID=$(id -u)
+export UNISON_GID=$(id -g)
+log_heading "Setting up HOME for user uid ${UNISON_UID}."
+sudo chown -R ${UNISON_UID}:${UNISON_GID} ${HOME} ${SYNC_DESTINATION}
 
 #
 # Set defaults for all variables that we depend on (if they aren't already set in env).
@@ -112,17 +116,28 @@ if [[ "$SYNC_VERBOSE" == "0" ]]; then
   SYNC_RSYNC_ARGS="$SYNC_RSYNC_ARGS --quiet"
 fi
 
-# If bg-sync runs with this environment variable set, we'll try to set the config
-# appropriately, but there's not much we can do if we're not allowed to do that.
-log_heading "Attempting to set maximum inotify watches to $SYNC_MAX_INOTIFY_WATCHES"
-log_info "If the container exits with 'Operation not allowed', make sure that"
-log_info "the container is running in privileged mode."
-if [[ -z "$(sysctl -p)" ]]; then
-    printf "fs.inotify.max_user_watches=$SYNC_MAX_INOTIFY_WATCHES\n" | tee -a /etc/sysctl.conf && 
-      sysctl -p
-else
-    log_info "Looks like /etc/sysctl.conf already has fs.inotify.max_user_watches defined."
-    log_info "Skipping this step."
+# # If bg-sync runs with this environment variable set, we'll try to set the config
+# # appropriately, but there's not much we can do if we're not allowed to do that.
+# log_heading "Attempting to set maximum inotify watches to $SYNC_MAX_INOTIFY_WATCHES"
+# log_info "If the container exits with 'Operation not allowed', make sure that"
+# log_info "the container is running in privileged mode."
+# if [[ -z "$(sysctl -p)" ]]; then
+#     printf "fs.inotify.max_user_watches=$SYNC_MAX_INOTIFY_WATCHES\n" | tee -a /etc/sysctl.conf && 
+#       sysctl -p
+# else
+#     log_info "Looks like /etc/sysctl.conf already has fs.inotify.max_user_watches defined."
+#     log_info "Skipping this step."
+# fi
+
+log_heading "Calculating number of files in $SYNC_SOURCE in the background"
+log_info "in order to set fs.inotify.max_user_watches"
+sudo sysctl -w fs.inotify.max_user_watches=${SYNC_MAX_INOTIFY_WATCHES:-20000}
+/set_max_user_watches.sh ${SYNC_SOURCE} 2>&1 >/dev/stdout &
+
+if [ -z "$(ls -A $SYNC_DESTINATION)" ]; then
+  log_heading "SYNC_DESTINATION was empty so performing initial rsync from SYNC_SOURCE=${SYNC_SOURCE} to SYNC_DESTINATION=${SYNC_DESTINATION}"
+  rsync -a "${SYNC_SOURCE}/" "${SYNC_DESTINATION}/"
+  log_heading "initial rsync from ${SYNC_SOURCE} to ${SYNC_DESTINATION} is complete"
 fi
 
 # Generate a unison profile so that we don't have a million options being passed
@@ -164,11 +179,13 @@ log = false
 
 maxthreads = 10
 $nodelete
+
 # Set preferred source during conflicts
-prefer = $SYNC_PREFER
-repeat = watch
+prefer=$SYNC_PREFER
+repeat=watch
 # DO NOT BE SILENT. That's how we know what Unison is doing
 silent = false
+logfile=/dev/stdout
 
 # Files to ignore
 ignore = Name *___jb_tmp___*
@@ -183,11 +200,6 @@ log_heading "Profile:"
 cat ${HOME}/.unison/default.prf
 
 # Start syncing files.
-log_heading "Starting continuous sync."
-# su -c "unison default" -s /bin/sh "${UNISON_USER}"
+log_heading "Starting unison continuous sync."
 
-if [[ "$UNISON_USER" != "root" ]]; then
-  su "${UNISON_USER}" -c "unison default"
-else
-  unison default
-fi
+exec unison -numericids default

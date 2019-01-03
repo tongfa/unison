@@ -51,14 +51,7 @@ documented below.
     of this configuration is *not*. Use this option at your own risk.
   * **`SYNC_NODELETE_SOURCE`** (default in image: '1', default in Docksal: '0'): Set this variable to "0" to allow
     Unison to sync deletions to the source directory. This could cause unpredictable
-    behavior with your source files.
-  * **`UNISON_USER`** (default: 'root'): The user running Unison. When this value
-    is customized it's also possible to specify UNISON_UID, UNISON_GROUP and
-    UNISON_GID to ensure that unison has the correct permissions to manage files
-    under SYNC_SOURCE and SYNC_DESTINATION.
-  * **`UNISON_UID`** (default: '0'): See UNISON_USER.
-  * **`UNISON_GROUP`** (default: 'root'): See UNISON_USER.
-  * **`UNISON_GID`** (default: '0'): See UNISON_USER.
+    behaviour with your source files.
 
 ## Credits
 
