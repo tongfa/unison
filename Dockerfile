@@ -16,9 +16,9 @@ RUN apk add --no-cache --virtual .build-dependencies build-base curl && \
     apk del .build-dependencies ocaml && \
     rm -rf /tmp/unison-${UNISON_VERSION}
 
+RUN apk add --no-cache su-exec
+
 ENV HOME="/root" \
-    UNISON_USER="root" \
-    UNISON_GROUP="root" \
     UNISON_UID="0" \
     UNISON_GID="0"
 

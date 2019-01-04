@@ -50,34 +50,19 @@ log_error_exit() {
 
 ### --------------------- RUNTIME --------------------- ###
 
-# Create non-root user
-if [[ "$UNISON_USER" != "root" ]]; then
-  log_heading "Preparing to run as non-root user."
-  log_heading "Setting up /home/${UNISON_USER}"
-  HOME="/home/${UNISON_USER}"
+# note we deal with uid, gid directly instead of their names for several reasons:
+# 1). Alpine Linux native user management only supports up to 256000, and some users
+#     report id's much higher than that.
+# 2). The mapping of names and ids may be different on this container versus the host
+#     or versus other containers.  Its simpler to just do things by id.
+# 3). There are edge case complications when specifying existing user or group names
+#     and also their ID's, since the system already assigned an ID for these names.
+# 4). It's possible to do things by id without having user accounts, eliminating the need
+#     for user management.
 
-  # Create group, if it does not exist
-  if ! grep -q "$UNISON_GROUP" /etc/group; then
-      log_info "Creating group $UNISON_GROUP"
-      addgroup -g "$UNISON_GID" -S "$UNISON_GROUP"
-  fi
-
-  # Create user, if it does not exist
-  if ! grep -q "$UNISON_USER" /etc/passwd; then
-      log_info "Creating user $UNISON_USER (UID=$UNISON_UID,GID=$UNISON_GID)"
-      adduser -u "$UNISON_UID" -D -S -G "$UNISON_GROUP" "$UNISON_USER" -s "$SHELL"
-  fi
-
-  # Create unison directory
-  log_info "Creating ${HOME}/.unison"
-  mkdir -p "${HOME}/.unison" || true
-
-  # Own the home directory
-  log_info "Applying user permissions to ${HOME}"
-  chown -R "${UNISON_USER}:${UNISON_GROUP}" "${HOME}"
-  log_info "Applying user permissions to destination"
-  chown -R "${UNISON_USER}:${UNISON_GROUP}" "${SYNC_DESTINATION}"
-fi
+# Own the destination directory
+log_info "Applying user permissions to destination ${UNISON_UID}:${UNISON_GID}"
+chown -R "${UNISON_UID}:${UNISON_GID}" "${SYNC_DESTINATION}"
 
 log_heading "Starting bg-sync"
 
@@ -128,7 +113,11 @@ fi
 # Generate a unison profile so that we don't have a million options being passed
 # to the unison command.
 log_heading "Generating Unison profile"
-mkdir -p "${HOME}/.unison"
+
+# unison reads environment variable UNISON for it's "home".
+export UNISON=/unison
+mkdir -p ${UNISON}
+chown "${UNISON_UID}:${UNISON_GID}" ${UNISON}
 
 unisonsilent="false"
 
@@ -177,17 +166,19 @@ ignore = Name {.*,*}.sw[pon]
 # Additional user configuration
 $SYNC_EXTRA_UNISON_PROFILE_OPTS
 
-" > ${HOME}/.unison/default.prf
+" > ${UNISON}/default.prf
 
 log_heading "Profile:"
-cat ${HOME}/.unison/default.prf
+cat ${UNISON}/default.prf
 
 # Start syncing files.
 log_heading "Starting continuous sync."
-# su -c "unison default" -s /bin/sh "${UNISON_USER}"
 
-if [[ "$UNISON_USER" != "root" ]]; then
-  su "${UNISON_USER}" -c "unison default"
+if [[ "$UNISON_UID" != "0" ]]; then
+  # note that running with the specified uid,gid has the desirable side effect
+  #  of "squashing" the uid,gid in the source when writing files into the destination.
+  su-exec ${UNISON_UID}:${UNISON_GID} unison default
 else
+  # note that gid,uid get squashed to 0,0 in this case in SYNC_DESTINATION.
   unison default
 fi
