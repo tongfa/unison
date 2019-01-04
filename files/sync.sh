@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #Exit on the error
 # EXPLANATION: remove -e since rsync exits with error code, which aborts this script.
-set -eo pipefail nounset errexit
+set -o pipefail nounset errexit
+#set -eo pipefail nounset errexit
 
 # Log output formatters
 log_heading() {
@@ -23,7 +24,7 @@ log_error_exit() {
 export UNISON_UID=$(id -u)
 export UNISON_GID=$(id -g)
 log_heading "Setting up HOME for user uid ${UNISON_UID}."
-sudo chown -R ${UNISON_UID}:${UNISON_GID} ${HOME} ${SYNC_DESTINATION}
+chown -R ${UNISON_UID}:${UNISON_GID} ${HOME} ${SYNC_DESTINATION} ${SYNC_SOURCE}
 
 #
 # Set defaults for all variables that we depend on (if they aren't already set in env).
@@ -141,6 +142,7 @@ if [ -z "$(ls -A $SYNC_DESTINATION)" ]; then
   log_heading "SYNC_DESTINATION was empty so performing initial rsync from SYNC_SOURCE=${SYNC_SOURCE} to SYNC_DESTINATION=${SYNC_DESTINATION}"
   rsync -a "${SYNC_SOURCE}/" "${SYNC_DESTINATION}/"
   log_heading "initial rsync from ${SYNC_SOURCE} to ${SYNC_DESTINATION} is complete"
+  chown -R ${UNISON_UID}:${UNISON_GID} ${HOME} ${SYNC_DESTINATION}
 fi
 
 # Generate a unison profile so that we don't have a million options being passed
